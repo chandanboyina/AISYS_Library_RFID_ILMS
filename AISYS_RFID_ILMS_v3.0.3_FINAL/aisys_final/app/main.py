@@ -53,6 +53,11 @@ def bootstrap_demo_data() -> None:
             ("DEMO-0001", "9780000000001", "RFID Systems Engineering", "AISYS Demo", "Technology"),
             ("DEMO-0002", "9780000000002", "Library Automation & Digital Services", "AISYS Demo", "Library Science"),
             ("DEMO-0003", "9780000000003", "Enterprise Information Systems", "AISYS Demo", "Computer Science"),
+            ("AISYS-ACC-0001", "TEST-AISYS-001", "Python for Library Automation", "A. Kumar", "Computer Science"),
+            ("AISYS-ACC-0002", "TEST-AISYS-002", "RFID Systems in Smart Libraries", "S. Reddy", "Library Science"),
+            ("AISYS-ACC-0003", "TEST-AISYS-003", "Database Management Fundamentals", "R. Sharma", "Database Systems"),
+            ("AISYS-ACC-0004", "TEST-AISYS-004", "Network Security Essentials", "P. Rao", "Cybersecurity"),
+            ("AISYS-ACC-0005", "TEST-AISYS-005", "Digital Library Management", "M. Patel", "Library Science"),
         ]
         for accession_no, isbn, title, author, category in demo_books:
             if not db.query(Book).filter(Book.accession_no == accession_no).first():
@@ -164,6 +169,11 @@ def load_demo_data(db: Session = Depends(get_db), user: User = Depends(require_r
         ("DEMO-0001", "9780000000001", "RFID Systems Engineering", "AISYS Demo", "Technology"),
         ("DEMO-0002", "9780000000002", "Library Automation & Digital Services", "AISYS Demo", "Library Science"),
         ("DEMO-0003", "9780000000003", "Enterprise Information Systems", "AISYS Demo", "Computer Science"),
+        ("AISYS-ACC-0001", "TEST-AISYS-001", "Python for Library Automation", "A. Kumar", "Computer Science"),
+        ("AISYS-ACC-0002", "TEST-AISYS-002", "RFID Systems in Smart Libraries", "S. Reddy", "Library Science"),
+        ("AISYS-ACC-0003", "TEST-AISYS-003", "Database Management Fundamentals", "R. Sharma", "Database Systems"),
+        ("AISYS-ACC-0004", "TEST-AISYS-004", "Network Security Essentials", "P. Rao", "Cybersecurity"),
+        ("AISYS-ACC-0005", "TEST-AISYS-005", "Digital Library Management", "M. Patel", "Library Science"),
     ]
     created = 0
     for accession_no, isbn, title, author, category in demo_books:
@@ -226,6 +236,8 @@ class SerialIssueRequest(BaseModel):
 
 @app.get("/api/books", response_model=list[BookOut])
 def books(q: str = "", db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+    # Normalize accidental leading/trailing/repeated spaces while retaining phrase search.
+    q = " ".join((q or "").split())
     query = db.query(Book)
     if q:
         term = f"%{q}%"
@@ -236,7 +248,7 @@ def books(q: str = "", db: Session = Depends(get_db), _user: User = Depends(get_
             | (Book.isbn.ilike(term))
             | (Book.category.ilike(term))
         )
-    return query.order_by(Book.id.desc()).limit(500).all()
+    return query.order_by(Book.title.asc(), Book.accession_no.asc()).limit(500).all()
 
 
 @app.post("/api/books", response_model=BookOut)
