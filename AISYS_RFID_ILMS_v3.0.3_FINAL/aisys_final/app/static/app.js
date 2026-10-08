@@ -126,7 +126,22 @@ async function showBook(acc){
 }
 function printItemLabel(acc){api('/api/books/'+encodeURIComponent(acc)).then(d=>{const w=window.open('','_blank','width=520,height=420');w.document.write(`<html><head><title>Item Label</title><style>body{font-family:Arial;padding:35px}.label{border:1px solid #222;padding:25px;width:380px}.code{font:32px monospace;letter-spacing:3px;margin:20px 0}</style></head><body><div class="label"><b>AISYS CENTRAL LIBRARY</b><h2>${esc(d.book.title)}</h2><p>${esc(d.book.author)}</p><div class="code">*${esc(d.book.accession_no)}*</div><p>Accession: ${esc(d.book.accession_no)}</p></div><script>window.print()<\/script></body></html>`);w.document.close()})}
 async function loadBookHistory(acc){const h=list(await api('/api/books/'+encodeURIComponent(acc)+'/history'));$('bookHistory').innerHTML='<hr>'+h.map(x=>row(x.status,`Member #${x.member_id} · ${x.protocol}`,dt(x.checkout_at))).join('')}
-async function createBook(button){setBusy(button,true,'Creating…');try{await api('/api/books',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:$('bookAccession').value.trim(),title:$('bookTitle').value.trim(),author:$('bookAuthor').value.trim(),category:$('bookCategory').value.trim(),isbn:$('bookIsbn').value.trim(),reference_only:$('bookReference').checked})});closeModal('bookModal');['bookAccession','bookTitle','bookAuthor','bookIsbn'].forEach(id=>$(id).value='');$('bookCategory').value='General';$('bookReference').checked=false;toast('Catalogue record created');await refreshAfterMutation(loadCatalog)}catch(e){toast(friendlyError(e,'Create catalogue record'),'error')}finally{setBusy(button,false)}}
+async function createBook(button){
+  const accession=$('bookAccession').value.trim(), title=$('bookTitle').value.trim(), author=$('bookAuthor').value.trim(), isbn=$('bookIsbn').value.trim(), category=$('bookCategory').value.trim();
+  const status=$('bookFormStatus'); status.className='form-status'; status.textContent='';
+  if(!accession||!title||!category){
+    status.className='form-status error'; status.textContent='Please complete the accession number, title and category.';
+    (!accession?$('bookAccession'):!title?$('bookTitle'):$('bookCategory')).focus(); return;
+  }
+  setBusy(button,true,'Creating record…');
+  try{
+    const created=await api('/api/books',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:accession,title,author,category,isbn,reference_only:$('bookReference').checked})});
+    await refreshAfterMutation(loadCatalog);
+    ['bookAccession','bookTitle','bookAuthor','bookIsbn'].forEach(id=>$(id).value=''); $('bookCategory').value='General'; $('bookReference').checked=false;
+    closeModal('bookModal'); toast('Catalogue record created: '+(created.accession_no||accession));
+  }catch(e){status.className='form-status error';status.textContent=friendlyError(e,'Create catalogue record');toast(status.textContent,'error')}
+  finally{setBusy(button,false)}
+}
 let members=[];async function loadMembers(){members=list(await api('/api/members'));renderMembers();markRefreshed()}function renderMembers(){const q=($('memberSearch')?.value||'').toLowerCase();const rows=members.filter(m=>(m.member_no+' '+m.name).toLowerCase().includes(q));$('membersTable').innerHTML=table(['Member','Name','Status','Fine','Action'],rows.map(m=>`<tr><td><b>${esc(m.member_no)}</b></td><td>${esc(m.name)}<br><small>${esc(m.email)}</small></td><td><span class="status ${m.blocked?'bad':'ok'}">${m.blocked?'BLOCKED':'ACTIVE'}</span></td><td>₹${Number(m.fine_amount).toFixed(2)}</td><td><button class="link" onclick="toggleBlock('${esc(m.member_no)}',${!m.blocked})">${m.blocked?'Unblock':'Block'}</button> <button class="link" onclick="setFine('${esc(m.member_no)}',${m.fine_amount})">Fine</button></td></tr>`).join(''))}
 async function createMember(button){setBusy(button,true,'Creating…');try{await api('/api/members',{method:'POST',headers:jsonHeaders,body:JSON.stringify({member_no:$('memberNo').value.trim(),name:$('memberName').value.trim(),email:$('memberEmail').value.trim()})});closeModal('memberModal');['memberNo','memberName','memberEmail'].forEach(id=>$(id).value='');toast('Member created');await refreshAfterMutation(loadMembers)}catch(e){toast(friendlyError(e,'Create member'),'error')}finally{setBusy(button,false)}}
 async function toggleBlock(no,b){try{await api(`/api/members/${encodeURIComponent(no)}/block?blocked=${b}`,{method:'POST'});toast(b?'Member blocked':'Member unblocked');await refreshAfterMutation(loadMembers)}catch(e){toast(friendlyError(e,'Update member status'),'error')}}
