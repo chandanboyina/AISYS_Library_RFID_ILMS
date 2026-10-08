@@ -139,7 +139,38 @@ async function loadAcquisitions(){const [a0,s0]=await Promise.all([api('/api/acq
 async function createAcquisition(button){setBusy(button,true,'Saving…');try{await api('/api/acquisitions',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:$('acqAcc').value.trim(),vendor:$('acqVendor').value.trim(),status:$('acqStatus').value})});$('acqAcc').value='';$('acqVendor').value='';toast('Acquisition saved');await refreshAfterMutation(loadAcquisitions)}catch(e){toast(friendlyError(e,'Save acquisition'),'error')}finally{setBusy(button,false)}}
 async function createSerial(button){setBusy(button,true,'Adding…');try{await api('/api/serials',{method:'POST',headers:jsonHeaders,body:JSON.stringify({title:$('serTitle').value.trim(),volume:$('serVol').value.trim(),issue_no:$('serIssue').value.trim(),issue_date:$('serDate').value.trim()})});['serTitle','serVol','serIssue','serDate'].forEach(id=>$(id).value='');toast('Serial issue added');await refreshAfterMutation(loadAcquisitions)}catch(e){toast(friendlyError(e,'Add serial issue'),'error')}finally{setBusy(button,false)}}
 async function validateBookForTag(){try{const d=await api('/api/books/'+encodeURIComponent($('tagAcc').value));$('tagValidation').className='notice good';$('tagValidation').textContent=`Valid: ${d.book.title} · ${d.book.available?'available':'issued'} · ${d.rfid?'existing tag '+d.rfid.tag_id:'no active tag'}`}catch(e){$('tagValidation').className='notice bad';$('tagValidation').textContent=e.message}}
-async function associateTag(button){setBusy(button,true,'Encoding…');try{const accession=$('tagAcc').value.trim();const tagId=$('tagUid').value.trim();if(!accession||!tagId)throw Error('Enter both an accession number and RFID tag UID.');await api('/api/rfid/associate',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:accession,tag_id:tagId})});$('tagUid').value='';toast('RFID tag encoded and associated','');await loadTags();await loadCatalog();markRefreshed()}catch(e){toast(friendlyError(e,'RFID association'),'error')}finally{setBusy(button,false)}}async function loadTags(){try{const t=list(await api('/api/rfid/tags'));$('tagsTable').innerHTML=table(['Tag UID','Accession','Active','Last seen'],t.map(x=>`<tr><td><b>${esc(x.tag_id)}</b></td><td>${esc(x.accession_no)}</td><td><span class="status ${x.active?'ok':'bad'}">${x.active?'ACTIVE':'RETIRED'}</span></td><td>${dt(x.last_seen_at)}</td></tr>`).join(''));}catch(e){$('tagsTable').innerHTML=table(['Tag UID','Accession','Active','Last seen'],[]);toast(friendlyError(e,'RFID tag list'),'error')}}
+async function associateTag(button){
+  setBusy(button,true,'Encoding…');
+  try{
+    const accession=$('tagAcc').value.trim();
+    const tagId=$('tagUid').value.trim();
+    if(!accession||!tagId)throw Error('Enter both an accession number and RFID tag UID.');
+    const created=await api('/api/rfid/associate',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:accession,tag_id:tagId})});
+    $('tagUid').value='';
+    $('tagValidation').className='notice good';
+    $('tagValidation').textContent='Tag associated successfully: '+(created.tag_id||tagId)+' → '+(created.accession_no||accession);
+    await loadTags({expectedTagId:created.tag_id||tagId});
+    await loadCatalog();
+    markRefreshed();
+    toast('RFID tag encoded and associated');
+  }catch(e){toast(friendlyError(e,'RFID association'),'error')}
+  finally{setBusy(button,false)}
+}
+async function loadTags(options={}){
+  const headers=['Tag UID','Accession','Active','Last seen'];
+  try{
+    const t=list(await api('/api/rfid/tags'));
+    $('tagsTable').innerHTML=table(headers,t.map(x=>'<tr><td><b>'+esc(x.tag_id)+'</b></td><td>'+esc(x.accession_no||'—')+'</td><td><span class="status '+(x.active?'ok':'bad')+'">'+(x.active?'ACTIVE':'RETIRED')+'</span></td><td>'+dt(x.last_seen_at)+'</td></tr>').join(''));
+    if(options.expectedTagId&&!t.some(x=>x.tag_id===options.expectedTagId)){
+      toast('Tag was saved, but the refreshed tag list did not return it. Check the active database and deployment.','error');
+    }
+    return t;
+  }catch(e){
+    $('tagsTable').innerHTML='<div class="empty-detail"><b>Tagged items could not be loaded</b><p>'+esc(e.message||'Request failed')+'</p><button type="button" class="btn outline" onclick="loadTags()">Try again</button></div>';
+    toast(friendlyError(e,'RFID tag list'),'error');
+    throw e;
+  }
+}
 async function inventoryScan(button){setBusy(button,true,'Scanning…');try{const expected=$('invExpected').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);const observed=$('invTags').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!expected.length&&!observed.length)throw Error('Enter expected or observed tag UIDs');const d=await api('/api/rfid/inventory/session',{method:'POST',headers:jsonHeaders,body:JSON.stringify({shelf:$('invShelf').value.trim(),expected_tag_ids:expected,observed_tag_ids:observed})});$('inventorySummary').textContent=`Expected ${d.expected} · Found ${d.found} · Missing ${d.missing} · Unknown ${d.unknown}`;$('inventoryTable').innerHTML=table(['Tag','Accession','Shelf','Classification','Confirmation'],(d.items||[]).map(x=>`<tr><td>${esc(x.tag_id)}</td><td>${esc(x.accession_no)}</td><td>${esc(x.shelf)}</td><td><span class="status ${x.status==='FOUND'?'ok':x.status==='MISPLACED'?'warn':'bad'}">${esc(x.status)}</span></td><td>${esc(x.confirmation)}</td></tr>`));toast('Shelf verification completed');await refreshAfterMutation(loadInventory)}catch(e){toast(friendlyError(e,'Shelf verification'),'error')}finally{setBusy(button,false)}}async function loadInventory(){await loadTags()}
 async function triggerGate(button){setBusy(button,true,'Evaluating…');try{const d=await api('/api/gate/event',{method:'POST',headers:jsonHeaders,body:JSON.stringify({tag_id:$('gateUid').value.trim(),security_bit:$('gateBit').checked,cctv_ref:$('gateCctv').value.trim(),lms_online:!$('gateOffline').checked,footfall_count:1})});toast(d.authorized?'Authorized passage recorded':'Unauthorized event queued',d.authorized?'':'error');await refreshAfterMutation(loadSecurity)}catch(e){toast(friendlyError(e,'Security gate'),'error')}finally{setBusy(button,false)}}async function loadSecurity(){const [g0,n0]=await Promise.all([api('/api/gate/events'),api('/api/notifications')]);const g=list(g0),n=list(n0);$('gateTable').innerHTML=table(['Time','Tag','Accession','Decision','CCTV','Notification'],g.map(x=>`<tr><td>${dt(x.created_at)}</td><td>${esc(x.tag_id)}</td><td>${esc(x.accession_no)}</td><td><span class="status ${x.authorized?'ok':'bad'}">${x.authorized?'AUTHORIZED':'ALARM'}</span></td><td>${esc(x.cctv_image_ref)}</td><td>${esc(x.notification_status)}</td></tr>`).join(''));$('notificationTable').innerHTML=table(['Channel','Recipient','Status','Message'],n.map(x=>`<tr><td>${esc(x.channel)}</td><td>${esc(x.recipient)}</td><td>${esc(x.status)}</td><td>${esc(x.message)}</td></tr>`).join(''))}
 async function smartCardCheck(button){setBusy(button,true,'Validating…');try{const d=await api('/api/smart-card/login',{method:'POST',headers:jsonHeaders,body:JSON.stringify({card_id:$('cardUid').value.trim(),username:$('cardUser').value.trim()})});$('cardResult').className=d.authenticated?'notice good':'notice bad';$('cardResult').textContent=d.authenticated?`Card accepted · ${d.username} · method ${d.method||'smartcard'}`:'Card rejected';toast(d.authenticated?'Smart card accepted':'Smart card rejected',d.authenticated?'':'error');await refreshAfterMutation()}catch(e){toast(friendlyError(e,'Smart-card validation'),'error')}finally{setBusy(button,false)}}
