@@ -157,6 +157,30 @@ def create_admin_user(payload: AdminUserCreate, db: Session = Depends(get_db), u
     db.add(item); audit(db, user.username, "CREATE_USER", "User", payload.username, details={"role": payload.role}); db.commit(); db.refresh(item)
     return {"id": item.id, "username": item.username, "role": item.role, "active": item.active}
 
+@app.post("/api/admin/demo-data")
+def load_demo_data(db: Session = Depends(get_db), user: User = Depends(require_roles("admin"))):
+    """Idempotently load the small synthetic dataset used by the public evaluation demo."""
+    demo_books = [
+        ("DEMO-0001", "9780000000001", "RFID Systems Engineering", "AISYS Demo", "Technology"),
+        ("DEMO-0002", "9780000000002", "Library Automation & Digital Services", "AISYS Demo", "Library Science"),
+        ("DEMO-0003", "9780000000003", "Enterprise Information Systems", "AISYS Demo", "Computer Science"),
+    ]
+    created = 0
+    for accession_no, isbn, title, author, category in demo_books:
+        if not db.query(Book).filter(Book.accession_no == accession_no).first():
+            db.add(Book(accession_no=accession_no, isbn=isbn, title=title, author=author, category=category))
+            created += 1
+    db.flush()
+    book = db.query(Book).filter(Book.accession_no == "DEMO-0001").first()
+    if book and not db.query(RFIDTag).filter(RFIDTag.tag_id == "RFID-DEMO-0001").first():
+        db.add(RFIDTag(tag_id="RFID-DEMO-0001", book_id=book.id))
+    if not db.query(Member).filter(Member.member_no == "M-DEMO-01").first():
+        db.add(Member(member_no="M-DEMO-01", name="Demo Member", email="demo@example.local"))
+    audit(db, user.username, "LOAD_DEMO_DATA", "System", "demo", details={"created_books": created})
+    db.commit()
+    return {"status": "READY", "created_books": created, "demo_books": len(demo_books), "demo_rfid": "RFID-DEMO-0001", "demo_member": "M-DEMO-01"}
+
+
 @app.get("/api/admin/config")
 def admin_config(db: Session = Depends(get_db), _user: User = Depends(require_roles("admin"))):
     values = {x.key:x.value for x in db.query(SystemConfig).order_by(SystemConfig.key).all()}
