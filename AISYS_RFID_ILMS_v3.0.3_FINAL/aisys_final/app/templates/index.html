@@ -50,7 +50,7 @@
 
     <div class="content">
       <section id="dashboard" class="section active">
-        <div class="section-title"><div><div class="kicker" id="dashboardKicker">LIBRARY OPERATIONS</div><h1 id="dashboardHeading">Dashboard</h1><p id="dashboardDescription">Live operational summary across the collection, circulation and RFID network.</p></div><div class="actions"><button type="button" class="btn outline" data-roles="admin" onclick="runDemo(this)">Run acceptance demo</button><button type="button" class="btn primary" onclick="showSection('catalog')">New catalogue record</button></div></div>
+        <div class="section-title"><div><div class="kicker" id="dashboardKicker">LIBRARY OPERATIONS</div><h1 id="dashboardHeading">Dashboard</h1><p id="dashboardDescription">Live operational summary across the collection, circulation and RFID network.</p></div><div class="actions"><button type="button" class="btn outline" data-roles="admin" onclick="runDemo(this)">Run acceptance demo</button><button type="button" class="btn primary" data-roles="admin,librarian" onclick="showSection('catalog')">New catalogue record</button></div></div>
         <div id="metrics" class="metric-table"></div>
         <div class="dashboard-grid">
           <div class="panel"><div class="panel-head"><div><b>Circulation today</b><small>Recent transactions</small></div><button type="button" class="link" onclick="showSection('circulation')">Open desk →</button></div><div id="dashCirculation"></div></div>
