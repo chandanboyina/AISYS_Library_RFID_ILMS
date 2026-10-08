@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#17324d"><title>AISYS ILMS</title>
-<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/app.css?v=3.1.0">
 </head>
 <body>
 <div id="authView" class="login-page">
@@ -16,7 +16,7 @@
       <label for="p">Password</label><input id="p" type="password" value="Admin@12345" autocomplete="current-password">
       <button type="submit" class="btn primary full">Sign in</button>
     </form>
-    <div id="loginStatus" class="login-status" aria-live="polite"></div><div class="login-note"><b>Demo:</b> admin / Admin@12345</div>
+    <div id="loginStatus" class="login-status" aria-live="polite"></div><div class="login-note"><b>Demo accounts</b><br>Admin: admin / Admin@12345<br>Librarian: librarian / Librarian@12345<br>Operator: operator / Operator@12345</div>
   </div>
   <div class="login-footer">AISYS ILMS · Synthetic data · Device integrations mocked for evaluation</div>
 </div>
@@ -26,18 +26,18 @@
     <div class="brand"><div class="logo">A</div><div><b>AISYS</b><span>ILMS</span></div></div>
     <div class="library-name">CENTRAL LIBRARY<br><small>Operations Console</small></div>
     <nav id="nav">
-      <button type="button" data-section="dashboard" class="nav active">▦ <span>Dashboard</span></button>
-      <button type="button" data-section="catalog" class="nav">▤ <span>Cataloguing & Search</span></button>
-      <button type="button" data-section="circulation" class="nav">⇄ <span>Circulation Desk</span></button>
-      <button type="button" data-section="members" class="nav">♙ <span>Members & Fines</span></button>
-      <button type="button" data-section="acquisitions" class="nav">▧ <span>Acquisitions & Serials</span></button>
-      <button type="button" data-section="tagging" class="nav">⌁ <span>RFID Tagging</span></button>
-      <button type="button" data-section="inventory" class="nav">▥ <span>Stock Verification</span></button>
-      <button type="button" data-section="security" class="nav">◈ <span>Security Gate</span></button>
-      <button type="button" data-section="migration" class="nav">⇧ <span>Data Migration</span></button>
-      <button type="button" data-section="reports" class="nav">▥ <span>Reports & Audit</span></button>
-      <button type="button" data-section="admin" class="nav admin-only">⚙ <span>Administration</span></button>
-      <button type="button" data-section="opac" class="nav">⌕ <span>Public OPAC</span></button>
+      <button type="button" data-section="dashboard" class="nav active" data-roles="admin,librarian,operator">▦ <span>Dashboard</span></button>
+      <button type="button" data-section="catalog" class="nav" data-roles="admin,librarian,operator">▤ <span>Cataloguing & Search</span></button>
+      <button type="button" data-section="circulation" class="nav" data-roles="admin,librarian,operator">⇄ <span>Circulation Desk</span></button>
+      <button type="button" data-section="members" class="nav" data-roles="admin,librarian">♙ <span>Members & Fines</span></button>
+      <button type="button" data-section="acquisitions" class="nav" data-roles="admin,librarian">▧ <span>Acquisitions & Serials</span></button>
+      <button type="button" data-section="tagging" class="nav" data-roles="admin,librarian">⌁ <span>RFID Tagging</span></button>
+      <button type="button" data-section="inventory" class="nav" data-roles="admin,librarian,operator">▥ <span>Stock Verification</span></button>
+      <button type="button" data-section="security" class="nav" data-roles="admin,librarian,operator">◈ <span>Security Gate</span></button>
+      <button type="button" data-section="migration" class="nav" data-roles="admin">⇧ <span>Data Migration</span></button>
+      <button type="button" data-section="reports" class="nav" data-roles="admin,librarian">▥ <span>Reports & Audit</span></button>
+      <button type="button" data-section="admin" class="nav admin-only" data-roles="admin">⚙ <span>Administration</span></button>
+      <button type="button" data-section="opac" class="nav" data-roles="admin,librarian,operator">⌕ <span>Public OPAC</span></button>
     </nav>
     <div class="side-status"><span class="dot"></span><div><b>System healthy</b><small>Local / isolated mode</small></div></div>
   </aside>
@@ -50,7 +50,7 @@
 
     <div class="content">
       <section id="dashboard" class="section active">
-        <div class="section-title"><div><div class="kicker">LIBRARY OPERATIONS</div><h1>Dashboard</h1><p>Live operational summary across the collection, circulation and RFID network.</p></div><div class="actions"><button type="button" class="btn outline" onclick="runDemo(this)">Run acceptance demo</button><button type="button" class="btn primary" onclick="showSection('catalog')">New catalogue record</button></div></div>
+        <div class="section-title"><div><div class="kicker" id="dashboardKicker">LIBRARY OPERATIONS</div><h1 id="dashboardHeading">Dashboard</h1><p id="dashboardDescription">Live operational summary across the collection, circulation and RFID network.</p></div><div class="actions"><button type="button" class="btn outline" data-roles="admin" onclick="runDemo(this)">Run acceptance demo</button><button type="button" class="btn primary" onclick="showSection('catalog')">New catalogue record</button></div></div>
         <div id="metrics" class="metric-table"></div>
         <div class="dashboard-grid">
           <div class="panel"><div class="panel-head"><div><b>Circulation today</b><small>Recent transactions</small></div><button type="button" class="link" onclick="showSection('circulation')">Open desk →</button></div><div id="dashCirculation"></div></div>
@@ -121,12 +121,12 @@
         <div class="toolbar panel"><input id="opacSearch" placeholder="Search catalogue" onkeydown="if(event.key==='Enter')loadOpac()"><button type="button" class="btn primary" onclick="loadOpac()">Search</button></div><div class="panel"><div id="opacTable"></div></div>
       </section>
     </div>
-    <footer>AISYS ILMS · Evaluation build v3.0.3 · Synthetic data / mocked external integrations <span id="lastRefresh"></span></footer>
+    <footer>AISYS ILMS · Role-based evaluation build v3.1.0 · Synthetic data / mocked external integrations <span id="lastRefresh"></span></footer>
   </main>
 </div>
 
 <div id="bookModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('bookModal')">×</button><h2>New catalogue item</h2><label>Accession number</label><input id="bookAccession"><label>Title</label><input id="bookTitle"><label>Author</label><input id="bookAuthor"><div class="row"><input id="bookIsbn" placeholder="ISBN"><input id="bookCategory" placeholder="Category" value="General"></div><label class="check"><input id="bookReference" type="checkbox"> Reference-only item</label><button type="button" class="btn primary full" onclick="createBook(this)">Create record</button></div></div>
 <div id="memberModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('memberModal')">×</button><h2>New member</h2><label>Member number</label><input id="memberNo"><label>Name</label><input id="memberName"><label>Email</label><input id="memberEmail"><button type="button" class="btn primary full" onclick="createMember(this)">Create member</button></div></div>
 <div id="toast" class="toast" hidden></div>
-<script src="/static/app.js?v=3.0.4"></script>
+<script src="/static/app.js?v=3.1.0"></script>
 </body></html>
