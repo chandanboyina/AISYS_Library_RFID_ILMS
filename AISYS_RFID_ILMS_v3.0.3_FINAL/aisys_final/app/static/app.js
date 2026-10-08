@@ -95,7 +95,7 @@ async function loadCatalog(button=null){
         '<td><span class="status '+(b.available?'ok':'bad')+'">'+(b.available?'AVAILABLE':'ISSUED')+'</span></td>'+
         '<td>'+(tag?esc(tag):'<span class="status warn">NOT TAGGED</span>')+'</td>'+
       '</tr>';
-    }).join(''));
+    }));
     markRefreshed();
   }catch(e){
     console.error('Catalogue search failed:',e);
@@ -175,7 +175,7 @@ async function loadTags(options={}){
   const headers=['Tag UID','Accession','Active','Last seen'];
   try{
     const t=list(await api('/api/rfid/tags'));
-    $('tagsTable').innerHTML=table(headers,t.map(x=>'<tr><td><b>'+esc(x.tag_id)+'</b></td><td>'+esc(x.accession_no||'—')+'</td><td><span class="status '+(x.active?'ok':'bad')+'">'+(x.active?'ACTIVE':'RETIRED')+'</span></td><td>'+dt(x.last_seen_at)+'</td></tr>').join(''));
+    $('tagsTable').innerHTML=table(headers,t.map(x=>'<tr><td><b>'+esc(x.tag_id)+'</b></td><td>'+esc(x.accession_no||'—')+'</td><td><span class="status '+(x.active?'ok':'bad')+'">'+(x.active?'ACTIVE':'RETIRED')+'</span></td><td>'+dt(x.last_seen_at)+'</td></tr>'));
     if(options.expectedTagId&&!t.some(x=>x.tag_id===options.expectedTagId)){
       toast('Tag was saved, but the refreshed tag list did not return it. Check the active database and deployment.','error');
     }
