@@ -5,7 +5,7 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -27,6 +27,9 @@ from app.services.audit import audit
 from app.services.library import checkin, checkout, gate_event, renew
 from app.services.migration import dry_run, import_file
 from pydantic import BaseModel
+from barcode import Code128
+from barcode.writer import SVGWriter
+from io import BytesIO
 
 
 def bootstrap_users() -> None:
@@ -105,6 +108,19 @@ def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "app_name": settings.app_name})
 
 
+
+@app.get("/api/books/{accession_no}/barcode.svg")
+def book_barcode(accession_no: str, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
+    book = db.query(Book).filter(Book.accession_no == accession_no).first()
+    if not book:
+        raise HTTPException(status_code=404, detail="Catalogue item not found")
+    # Code 128 supports alphanumeric accession numbers used by this application.
+    output = BytesIO()
+    Code128(book.accession_no, writer=SVGWriter()).write(
+        output, options={"write_text": False, "module_width": 0.35, "module_height": 18, "quiet_zone": 3}
+    )
+    return Response(content=output.getvalue(), media_type="image/svg+xml",
+                    headers={"Cache-Control": "no-store", "Content-Disposition": "inline"})
 
 @app.get("/api/books/{accession_no}")
 def book_detail(accession_no: str, db: Session = Depends(get_db), _user: User = Depends(get_current_user)):
