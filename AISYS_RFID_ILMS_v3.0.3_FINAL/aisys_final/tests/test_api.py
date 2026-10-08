@@ -23,6 +23,12 @@ def test_book_member_rfid_flow():
         assert client.post("/api/books", json={"accession_no": "T-001", "title": "Test Book"}, headers=h).status_code in (200, 409)
         assert client.post("/api/members", json={"member_no": "TM-001", "name": "Test Member"}, headers=h).status_code in (200, 409)
         assert client.post("/api/rfid/associate", json={"accession_no": "T-001", "tag_id": "TAG-T-001"}, headers=h).status_code in (200, 409)
+        search = client.get("/api/books?q=Test%20Book", headers=h)
+        assert search.status_code == 200
+        assert any(x["accession_no"] == "T-001" for x in search.json())
+        tags = client.get("/api/rfid/tags", headers=h)
+        assert tags.status_code == 200
+        assert any(x["tag_id"] == "TAG-T-001" and x["accession_no"] == "T-001" for x in tags.json())
         r = client.post("/api/rfid/read", json={"tag_id": "TAG-T-001", "shelf": "S1", "expected_shelf": "S1"}, headers=h)
         assert r.status_code == 200
         assert r.json()["status"] == "FOUND"
