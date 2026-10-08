@@ -28,3 +28,9 @@
 .modal-actions .btn{min-height:42px;padding:0 18px}
 .form-footnote{font-size:10px;color:var(--muted);margin:13px 0 0}
 @media(max-width:520px){.modal-card.catalogue-modal{padding:23px 18px 18px}.form-grid{grid-template-columns:1fr;gap:13px}.field.full-field,.full-field{grid-column:auto}.modal-actions{flex-direction:column-reverse}.modal-actions .btn{width:100%}}
+
+.member-modal .modal-intro{font-size:13px;line-height:1.55;color:var(--muted);margin:0 0 18px}
+.member-modal label{display:block;font-size:12px;font-weight:700;margin:12px 0 6px}
+.member-modal input{box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid #cbd5df;border-radius:5px;font:inherit;font-size:14px}
+.member-modal input:focus{outline:none;border-color:#3679a8;box-shadow:0 0 0 3px rgba(54,121,168,.13)}
+.member-modal .btn{margin-top:18px}
