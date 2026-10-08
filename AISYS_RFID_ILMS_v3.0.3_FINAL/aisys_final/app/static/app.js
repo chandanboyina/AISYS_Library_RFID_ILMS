@@ -124,7 +124,18 @@ async function showBook(acc){
       '<button class="btn outline" onclick="loadBookHistory(\''+esc(acc)+'\')">View circulation history</button> <button class="btn outline" onclick="printItemLabel(\''+esc(acc)+'\')">Print item label</button><div id="bookHistory"></div>';
   }catch(e){toast(friendlyError(e,'Open catalogue record'),'error')}
 }
-function printItemLabel(acc){api('/api/books/'+encodeURIComponent(acc)).then(d=>{const w=window.open('','_blank','width=520,height=420');w.document.write(`<html><head><title>Item Label</title><style>body{font-family:Arial;padding:35px}.label{border:1px solid #222;padding:25px;width:380px}.code{font:32px monospace;letter-spacing:3px;margin:20px 0}</style></head><body><div class="label"><b>AISYS CENTRAL LIBRARY</b><h2>${esc(d.book.title)}</h2><p>${esc(d.book.author)}</p><div class="code">*${esc(d.book.accession_no)}*</div><p>Accession: ${esc(d.book.accession_no)}</p></div><script>window.print()<\/script></body></html>`);w.document.close()})}
+async function printItemLabel(acc){
+  try{
+    const d=await api('/api/books/'+encodeURIComponent(acc));
+    const r=await fetch('/api/books/'+encodeURIComponent(acc)+'/barcode.svg',{headers:token?{Authorization:'Bearer '+token}:{}});
+    if(!r.ok){let msg='Barcode generation failed ('+r.status+')';try{const e=await r.json();msg=e.detail||msg}catch{}throw Error(msg)}
+    const svg=await r.text();
+    const w=window.open('','_blank','width=560,height=500');
+    if(!w)throw Error('Allow pop-ups for this site to print the item label.');
+    w.document.write('<!doctype html><html><head><title>AISYS Item Label</title><style>@page{size:auto;margin:10mm}body{font-family:Arial,sans-serif;padding:16px;color:#142d43}.label{border:1px solid #9aa9b6;padding:20px;width:360px;max-width:90vw;text-align:center}.brand{font-size:11px;letter-spacing:1.5px;font-weight:700;color:#087f8c}.title{font-size:18px;margin:12px 0 5px}.meta{font-size:12px;color:#465b6d}.barcode{display:block;width:100%;height:auto;max-height:100px;margin:16px auto 6px}.accession{font:700 15px monospace;letter-spacing:1px;margin:6px 0}.small{font-size:10px;color:#536575}@media print{body{padding:0}.label{break-inside:avoid}}</style></head><body><div class="label"><div class="brand">AISYS CENTRAL LIBRARY</div><h2 class="title">'+esc(d.book.title)+'</h2><div class="meta">'+esc(d.book.author||'')+' · '+esc(d.book.category||'')+'</div><div class="barcode">'+svg+'</div><div class="accession">'+esc(d.book.accession_no)+'</div><div class="small">CODE 128 · Scan the barcode to identify this copy</div></div><script>window.onload=()=>window.print()<\\/script></body></html>');
+    w.document.close();
+  }catch(e){toast(friendlyError(e,'Print barcode label'),'error')}
+}
 async function loadBookHistory(acc){const h=list(await api('/api/books/'+encodeURIComponent(acc)+'/history'));$('bookHistory').innerHTML='<hr>'+h.map(x=>row(x.status,`Member #${x.member_id} · ${x.protocol}`,dt(x.checkout_at))).join('')}
 async function createBook(button){
   const accession=$('bookAccession').value.trim(), title=$('bookTitle').value.trim(), author=$('bookAuthor').value.trim(), isbn=$('bookIsbn').value.trim(), category=$('bookCategory').value.trim();
