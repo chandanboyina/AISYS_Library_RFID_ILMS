@@ -153,11 +153,52 @@ async function createBook(button){
   }catch(e){status.className='form-status error';status.textContent=friendlyError(e,'Create catalogue record');toast(status.textContent,'error')}
   finally{setBusy(button,false)}
 }
-let members=[];async function loadMembers(){members=list(await api('/api/members'));renderMembers();markRefreshed()}function renderMembers(){const q=($('memberSearch')?.value||'').toLowerCase();const rows=members.filter(m=>(m.member_no+' '+m.name).toLowerCase().includes(q));$('membersTable').innerHTML=table(['Member','Name','Status','Fine','Action'],rows.map(m=>`<tr><td><b>${esc(m.member_no)}</b></td><td>${esc(m.name)}<br><small>${esc(m.email)}</small></td><td><span class="status ${m.blocked?'bad':'ok'}">${m.blocked?'BLOCKED':'ACTIVE'}</span></td><td>₹${Number(m.fine_amount).toFixed(2)}</td><td><button class="link" onclick="toggleBlock('${esc(m.member_no)}',${!m.blocked})">${m.blocked?'Unblock':'Block'}</button> <button class="link" onclick="setFine('${esc(m.member_no)}',${m.fine_amount})">Fine</button></td></tr>`))}
+let members=[];
+async function loadMembers(){
+  try{members=list(await api('/api/members'));renderMembers();populateCheckoutMembers();markRefreshed()}
+  catch(e){toast(friendlyError(e,'Load members'),'error')}
+}
+function populateCheckoutMembers(){
+  const select=$('coMember');if(!select)return;
+  const previous=select.value;
+  select.innerHTML='<option value="">Select a member…</option>'+members.map(m=>'<option value="'+esc(m.member_no)+'">'+esc(m.member_no)+' — '+esc(m.name)+(m.blocked?' (BLOCKED)':'')+'</option>').join('');
+  if(members.some(m=>m.member_no===previous))select.value=previous;
+  updateCheckoutMemberSummary();
+}
+function updateCheckoutMemberSummary(){
+  const m=members.find(x=>x.member_no===$('coMember')?.value),box=$('coMemberSummary');if(!box)return;
+  box.textContent=!m?'Choose a member to view their status and fine balance.':'Name: '+m.name+' · '+(m.blocked?'BLOCKED — checkout not permitted':'Active')+' · Fine balance: ₹'+Number(m.fine_amount||0).toFixed(2);
+}
+function renderMembers(){
+  const q=($('memberSearch')?.value||'').toLowerCase();
+  const rows=members.filter(m=>(m.member_no+' '+m.name+' '+(m.email||'')).toLowerCase().includes(q));
+  $('membersTable').innerHTML=table(['Member','Name','Status','Fine','Details / Actions'],rows.map(m=>'<tr><td><b>'+esc(m.member_no)+'</b></td><td>'+esc(m.name)+'<br><small>'+esc(m.email||'—')+'</small></td><td><span class="status '+(m.blocked?'bad':'ok')+'">'+(m.blocked?'BLOCKED':'ACTIVE')+'</span></td><td>₹'+Number(m.fine_amount||0).toFixed(2)+'</td><td><button class="link" onclick="showMemberDetails(\''+esc(m.member_no)+'\')">View details</button> <button class="link" onclick="toggleBlock(\''+esc(m.member_no)+'\','+(!m.blocked)+')">'+(m.blocked?'Unblock':'Block')+'</button> <button class="link" onclick="setFine(\''+esc(m.member_no)+'\','+Number(m.fine_amount||0)+')">Fine</button></td></tr>'));
+}
+async function showMemberDetails(memberNo){
+  try{
+    const m=members.find(x=>x.member_no===memberNo);
+    if(!m)throw Error('Member record not found. Refresh the member list and try again.');
+    const history=list(await api('/api/circulation/history'));
+    const loans=history.filter(x=>String(x.member_id)===String(m.id)||String(x.member_no)===String(m.member_no));
+    $('memberDetailContent').innerHTML='<div class="health-box"><div class="health-line"><span>Member number</span><b>'+esc(m.member_no)+'</b></div><div class="health-line"><span>Name</span><b>'+esc(m.name)+'</b></div><div class="health-line"><span>Email</span><b>'+esc(m.email||'—')+'</b></div><div class="health-line"><span>Status</span><b class="status '+(m.blocked?'bad':'ok')+'">'+(m.blocked?'BLOCKED':'ACTIVE')+'</b></div><div class="health-line"><span>Fine balance</span><b>₹'+Number(m.fine_amount||0).toFixed(2)+'</b></div></div><h3>Circulation history</h3>'+table(['Transaction','Book ID','Status','Channel','Due','Returned'],loans.map(x=>'<tr><td>'+esc(x.id)+'</td><td>'+esc(x.book_id)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.protocol)+'</td><td>'+dt(x.due_at)+'</td><td>'+dt(x.returned_at)+'</td></tr>'));
+    openModal('memberDetailModal');
+  }catch(e){toast(friendlyError(e,'Member details'),'error')}
+}
 async function createMember(button){setBusy(button,true,'Creating…');try{await api('/api/members',{method:'POST',headers:jsonHeaders,body:JSON.stringify({member_no:$('memberNo').value.trim(),name:$('memberName').value.trim(),email:$('memberEmail').value.trim()})});closeModal('memberModal');['memberNo','memberName','memberEmail'].forEach(id=>$(id).value='');toast('Member created');await refreshAfterMutation(loadMembers)}catch(e){toast(friendlyError(e,'Create member'),'error')}finally{setBusy(button,false)}}
 async function toggleBlock(no,b){try{await api(`/api/members/${encodeURIComponent(no)}/block?blocked=${b}`,{method:'POST'});toast(b?'Member blocked':'Member unblocked');await refreshAfterMutation(loadMembers)}catch(e){toast(friendlyError(e,'Update member status'),'error')}}
 async function setFine(no,current){const v=prompt('Fine amount (₹):',current);if(v===null)return;const amount=Number(v);if(!Number.isFinite(amount)||amount<0){toast('Enter a valid non-negative fine amount.','error');return}try{await api(`/api/members/${encodeURIComponent(no)}/fine?amount=${encodeURIComponent(amount)}`,{method:'POST'});toast('Fine updated');await refreshAfterMutation(loadMembers)}catch(e){toast(friendlyError(e,'Update fine'),'error')}}
-async function checkoutItem(button){setBusy(button,true,'Issuing…');try{const d=await api('/api/circulation/checkout',{method:'POST',headers:jsonHeaders,body:JSON.stringify({member_no:$('coMember').value.trim(),accession_no:$('coBook').value.trim(),protocol:$('coProtocol').value,days:+$('coDays').value})});toast('Checkout completed · due '+dt(d.due_at));await refreshAfterMutation(loadCirculation)}catch(e){toast(friendlyError(e,'Checkout'),'error')}finally{setBusy(button,false)}}
+async function checkoutItem(button){
+  const memberNo=$('coMember').value,accession=$('coBook').value.trim();
+  if(!memberNo){toast('Select a member before issuing an item.','error');return}
+  if(!accession){toast('Enter an accession number.','error');return}
+  setBusy(button,true,'Issuing…');
+  try{
+    const d=await api('/api/circulation/checkout',{method:'POST',headers:jsonHeaders,body:JSON.stringify({member_no:memberNo,accession_no:accession,protocol:$('coProtocol').value,days:+$('coDays').value})});
+    toast('Checkout completed · due '+dt(d.due_at));
+    await refreshAfterMutation(loadCirculation);await loadCatalog();await loadMembers();
+  }catch(e){toast(friendlyError(e,'Checkout'),'error')}
+  finally{setBusy(button,false)}
+}
 async function renewItem(button){setBusy(button,true,'Renewing…');try{const d=await api('/api/circulation/renew',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:$('rnBook').value.trim(),protocol:$('rnProtocol').value,days:+$('rnDays').value})});toast('Loan renewed · due '+dt(d.due_at));await refreshAfterMutation(loadCirculation)}catch(e){toast(friendlyError(e,'Renew loan'),'error')}finally{setBusy(button,false)}}
 async function checkinItem(button){setBusy(button,true,'Returning…');try{await api('/api/circulation/checkin',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:$('ciBook').value.trim(),protocol:$('ciProtocol').value,days:14})});toast('Item checked in');await refreshAfterMutation(loadCirculation)}catch(e){toast(friendlyError(e,'Check in'),'error')}finally{setBusy(button,false)}}
 async function loadCirculation(){const c=list(await api('/api/circulation/history'));$('circulationTable').innerHTML=table(['ID','Book','Member','Status','Channel','Checkout','Due','Returned'],c.map(x=>`<tr><td>${x.id}</td><td>${x.book_id}</td><td>${x.member_id}</td><td><span class="status ${x.status==='RETURNED'?'ok':'warn'}">${x.status}</span></td><td>${esc(x.protocol)}</td><td>${dt(x.checkout_at)}</td><td>${dt(x.due_at)}</td><td>${dt(x.returned_at)}</td></tr>`))}
@@ -208,3 +249,5 @@ async function saveConfig(button){setBusy(button,true,'Saving…');try{await api
 async function loadOpac(){const q=encodeURIComponent($('opacSearch')?.value||'');const r=list(await api('/api/opac?q='+q));$('opacTable').innerHTML=table(['Title','Author','Category','Availability','Accession'],r.map(x=>`<tr><td><b>${esc(x.title)}</b></td><td>${esc(x.author)}</td><td>${esc(x.category)}</td><td><span class="status ${x.available?'ok':'bad'}">${x.available?'Available':'Issued'}</span></td><td>${esc(x.accession_no)}</td></tr>`))}
 async function runDemo(button){setBusy(button,true,'Running demo…');try{await createBookSafe({accession_no:'DEMO-ILMS-001',title:'RFID Library Systems',author:'AISYS Demo',category:'Technology'});await createMemberSafe({member_no:'DEMO-M-001',name:'Demo Patron',email:'demo@example.local'});await associateSafe({accession_no:'DEMO-ILMS-001',tag_id:'RFID-DEMO-ILMS-001'});await api('/api/rfid/read',{method:'POST',headers:jsonHeaders,body:JSON.stringify({tag_id:'RFID-DEMO-ILMS-001',shelf:'A-01',expected_shelf:'A-01'})});toast('Acceptance demo completed');await refreshAll()}catch(e){toast(friendlyError(e,'Acceptance demo'),'error')}finally{setBusy(button,false)}}async function createBookSafe(b){try{return await api('/api/books',{method:'POST',headers:jsonHeaders,body:JSON.stringify(b)})}catch(e){if(e.message.includes('already exists'))return null;throw e}}async function createMemberSafe(b){try{return await api('/api/members',{method:'POST',headers:jsonHeaders,body:JSON.stringify(b)})}catch(e){if(e.message.includes('already exists'))return null;throw e}}async function associateSafe(b){try{return await api('/api/rfid/associate',{method:'POST',headers:jsonHeaders,body:JSON.stringify(b)})}catch(e){if(e.message.includes('already exists'))return null;throw e}}
 window.addEventListener('error',e=>{if(e?.message)toast(friendlyError(e.error||e,'Interface error'),'error')});window.addEventListener('unhandledrejection',e=>{e.preventDefault();toast(friendlyError(e.reason,'Interface operation'),'error')});if(token)showApp();
+
+if($('coMember'))$('coMember').addEventListener('change',updateCheckoutMemberSummary);
