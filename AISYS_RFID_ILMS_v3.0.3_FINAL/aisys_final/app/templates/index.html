@@ -62,7 +62,7 @@
 
       <section id="catalog" class="section">
         <div class="section-title"><div><div class="kicker">BIBLIOGRAPHIC CONTROL</div><h1>Cataloguing & Search</h1><p>Search bibliographic records, inspect copies, availability and RFID state.</p></div><button type="button" class="btn primary" onclick="openModal('bookModal')">+ New item</button></div>
-        <div class="toolbar panel"><input id="bookSearch" placeholder="Search title, author, accession, ISBN or category" onkeydown="if(event.key==='Enter')loadCatalog()"><button type="button" class="btn primary" onclick="loadCatalog()">Search</button><button type="button" class="btn outline" onclick="resetCatalogSearch()">Reset</button></div>
+        <div class="toolbar panel"><input id="bookSearch" placeholder="Search title, author, accession, ISBN or category" onkeydown="if(event.key==='Enter')loadCatalog()"><button type="button" class="btn primary" onclick="loadCatalog(this)">Search</button><button type="button" class="btn outline" onclick="resetCatalogSearch()">Reset</button></div>
         <div class="two-col"><div class="panel"><div class="panel-head"><b>Catalogue records</b><span id="bookCount" class="count"></span></div><div id="catalogTable"></div></div><div class="panel detail"><div class="empty-detail" id="bookDetail">Select a catalogue record to view item, RFID and circulation details.</div></div></div>
       </section>
 
@@ -128,5 +128,5 @@
 <div id="bookModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('bookModal')">×</button><h2>New catalogue item</h2><label>Accession number</label><input id="bookAccession"><label>Title</label><input id="bookTitle"><label>Author</label><input id="bookAuthor"><div class="row"><input id="bookIsbn" placeholder="ISBN"><input id="bookCategory" placeholder="Category" value="General"></div><label class="check"><input id="bookReference" type="checkbox"> Reference-only item</label><button type="button" class="btn primary full" onclick="createBook(this)">Create record</button></div></div>
 <div id="memberModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('memberModal')">×</button><h2>New member</h2><label>Member number</label><input id="memberNo"><label>Name</label><input id="memberName"><label>Email</label><input id="memberEmail"><button type="button" class="btn primary full" onclick="createMember(this)">Create member</button></div></div>
 <div id="toast" class="toast" hidden></div>
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=3.0.4"></script>
 </body></html>
