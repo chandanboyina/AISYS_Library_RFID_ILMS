@@ -25,8 +25,37 @@ function setBusy(button,busy,label){if(!button)return;if(busy){button.dataset.or
 async function login(button){const submit=button||document.querySelector('#loginForm button[type="submit"]');const username=$('u')?.value.trim();const password=$('p')?.value||'';if(!username||!password){if($('loginStatus')){$('loginStatus').className='login-status error';$('loginStatus').textContent='Enter your username and password.'}toast('Enter your username and password.','error');return false}
   if($('loginStatus')){$('loginStatus').className='login-status';$('loginStatus').textContent='Signing in…'}setBusy(submit,true,'Signing in…');try{const fd=new URLSearchParams();fd.set('username',username);fd.set('password',password);const d=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:fd});let j={};try{j=await d.json()}catch{}if(!d.ok)throw Error(j.detail||'Invalid username or password.');token=j.access_token;localStorage.setItem('aisys_token',token);if($('loginStatus')){$('loginStatus').className='login-status good';$('loginStatus').textContent='Signed in successfully.'}await showApp();return true}catch(e){if($('loginStatus')){$('loginStatus').className='login-status error';$('loginStatus').textContent=friendlyError(e,'Sign in')}toast(friendlyError(e,'Sign in'),'error');return false}finally{setBusy(submit,false)}}
 function logout(){if(refreshTimer)clearInterval(refreshTimer);token=null;currentUser=null;currentRole=null;localStorage.removeItem('aisys_token');showAuthView();$('u').value='';$('p').value='';toast('You have been signed out.')}
-async function showApp(){try{const m=await api('/api/me');currentUser=m.username;currentRole=m.role;$('authView').hidden=true;$('authView').style.display='none';$('appShell').hidden=false;$('appShell').style.display='flex';$('me').textContent=m.username;$('rolePill').textContent=m.role.toUpperCase();document.querySelectorAll('.admin-only').forEach(x=>x.style.display=m.role==='admin'?'flex':'none');await refreshAll();showSection('dashboard');startClock()}catch(e){console.error('Authentication/session check failed:',e);token=null;localStorage.removeItem('aisys_token');showAuthView();toast(friendlyError(e,'Session check'),'error')}}
-function showSection(id){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));const section=$(id);if(!section)return;section.classList.add('active');document.querySelector(`.nav[data-section="${id}"]`)?.classList.add('active');$('pageTitle').textContent=document.querySelector(`.nav[data-section="${id}"] span`)?.textContent||id;const loaders={dashboard:loadDashboard,catalog:loadCatalog,circulation:loadCirculation,members:loadMembers,acquisitions:loadAcquisitions,tagging:loadTags,inventory:loadInventory,security:loadSecurity,migration:loadMigrations,reports:loadReports,admin:loadAdmin,opac:loadOpac};const loader=loaders[id];if(loader)loader().then(markRefreshed).catch(e=>toast(friendlyError(e,`${id} refresh`),'error'))}
+const ROLE_SECTIONS={admin:['dashboard','catalog','circulation','members','acquisitions','tagging','inventory','security','migration','reports','admin','opac'],librarian:['dashboard','catalog','circulation','members','acquisitions','tagging','inventory','security','reports','opac'],operator:['dashboard','catalog','circulation','inventory','security','opac']};
+function applyRoleExperience(){
+ const labels={admin:{title:'Administration overview',kicker:'SYSTEM OVERSIGHT',description:'Monitor collection, staff access, migrations, security and system health.'},librarian:{title:'Librarian workspace',kicker:'LIBRARY SERVICES',description:'Manage catalogue records, patrons, circulation, RFID tagging and stock verification.'},operator:{title:'Operations workspace',kicker:'FRONT-DESK OPERATIONS',description:'Process permitted loans and returns, run inventory scans and review security events.'}};
+ const copy=labels[currentRole]||labels.operator;
+ if($('dashboardHeading'))$('dashboardHeading').textContent=copy.title;
+ if($('dashboardKicker'))$('dashboardKicker').textContent=copy.kicker;
+ if($('dashboardDescription'))$('dashboardDescription').textContent=copy.description;
+ document.querySelectorAll('[data-roles]').forEach(el=>{const allowed=(el.dataset.roles||'').split(',').map(x=>x.trim());el.hidden=!allowed.includes(currentRole)});
+ document.querySelectorAll('.nav[data-section]').forEach(el=>{const allowed=(el.dataset.roles||'admin,librarian,operator').split(',').map(x=>x.trim());el.hidden=!allowed.includes(currentRole)});
+ const subtitle=document.querySelector('.library-name small');
+ if(subtitle)subtitle.textContent=({admin:'Administration Console',librarian:'Librarian Workspace',operator:'Circulation & Inventory'})[currentRole]||'Library Workspace';
+}
+async function showApp(){
+ try{
+  const m=await api('/api/me');currentUser=m.username;currentRole=m.role;
+  $('authView').hidden=true;$('authView').style.display='none';$('appShell').hidden=false;$('appShell').style.display='flex';
+  $('me').textContent=m.username;$('rolePill').textContent=m.role.toUpperCase();applyRoleExperience();
+  await refreshAll();showSection('dashboard');startClock();
+ }catch(e){console.error('Authentication/session check failed:',e);token=null;localStorage.removeItem('aisys_token');showAuthView();toast(friendlyError(e,'Session check'),'error')}
+}
+function showSection(id){
+ const allowed=ROLE_SECTIONS[currentRole]||ROLE_SECTIONS.operator;
+ if(!allowed.includes(id)){toast('This workspace is not available for your role.','error');return}
+ document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));
+ document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
+ const section=$(id);if(!section)return;section.classList.add('active');
+ document.querySelector('.nav[data-section="'+id+'"]')?.classList.add('active');
+ $('pageTitle').textContent=document.querySelector('.nav[data-section="'+id+'"] span')?.textContent||id;
+ const loaders={dashboard:loadDashboard,catalog:loadCatalog,circulation:loadCirculation,members:loadMembers,acquisitions:loadAcquisitions,tagging:loadTags,inventory:loadInventory,security:loadSecurity,migration:loadMigrations,reports:loadReports,admin:loadAdmin,opac:loadOpac};
+ const loader=loaders[id];if(loader)loader().then(markRefreshed).catch(e=>toast(friendlyError(e,id+' refresh'),'error'));
+}
 document.addEventListener('click',e=>{const n=e.target.closest('.nav');if(n){e.preventDefault();showSection(n.dataset.section)}});
 function openModal(id){$(id).hidden=false;$(id).querySelector('input,select,textarea')?.focus()}
 function closeModal(id){$(id).hidden=true}
