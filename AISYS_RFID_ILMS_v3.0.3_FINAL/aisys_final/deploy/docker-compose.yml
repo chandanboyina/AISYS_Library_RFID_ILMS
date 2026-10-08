@@ -1,0 +1,30 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aisys
+      POSTGRES_USER: aisys
+      POSTGRES_PASSWORD: aisys_demo_change_me
+    volumes:
+      - aisys_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aisys -d aisys"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://aisys:aisys_demo_change_me@db:5432/aisys
+      SECRET_KEY: replace-before-deployment
+      ENVIRONMENT: isolated
+      CORS_ORIGINS: http://localhost:8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  aisys_pg:

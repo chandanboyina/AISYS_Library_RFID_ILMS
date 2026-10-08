@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#17324d"><title>AISYS ILMS</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div id="authView" class="login-page">
+  <div class="login-brand"><div class="logo">A</div><div><b>AISYS</b><span>Integrated Library Management</span></div></div>
+  <div class="login-card">
+    <div class="login-kicker">STAFF ACCESS</div><h1>Library Management System</h1>
+    <p>Secure access to cataloguing, circulation, RFID inventory and library operations.</p>
+    <form id="loginForm" onsubmit="event.preventDefault();login(this.querySelector('button[type=submit]'))" novalidate>
+      <label for="u">Username</label><input id="u" value="admin" autocomplete="username" autocapitalize="none" spellcheck="false">
+      <label for="p">Password</label><input id="p" type="password" value="Admin@12345" autocomplete="current-password">
+      <button type="submit" class="btn primary full">Sign in</button>
+    </form>
+    <div id="loginStatus" class="login-status" aria-live="polite"></div><div class="login-note"><b>Demo:</b> admin / Admin@12345</div>
+  </div>
+  <div class="login-footer">AISYS ILMS · Synthetic data · Device integrations mocked for evaluation</div>
+</div>
+
+<div id="appShell" hidden class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">A</div><div><b>AISYS</b><span>ILMS</span></div></div>
+    <div class="library-name">CENTRAL LIBRARY<br><small>Operations Console</small></div>
+    <nav id="nav">
+      <button type="button" data-section="dashboard" class="nav active">▦ <span>Dashboard</span></button>
+      <button type="button" data-section="catalog" class="nav">▤ <span>Cataloguing & Search</span></button>
+      <button type="button" data-section="circulation" class="nav">⇄ <span>Circulation Desk</span></button>
+      <button type="button" data-section="members" class="nav">♙ <span>Members & Fines</span></button>
+      <button type="button" data-section="acquisitions" class="nav">▧ <span>Acquisitions & Serials</span></button>
+      <button type="button" data-section="tagging" class="nav">⌁ <span>RFID Tagging</span></button>
+      <button type="button" data-section="inventory" class="nav">▥ <span>Stock Verification</span></button>
+      <button type="button" data-section="security" class="nav">◈ <span>Security Gate</span></button>
+      <button type="button" data-section="migration" class="nav">⇧ <span>Data Migration</span></button>
+      <button type="button" data-section="reports" class="nav">▥ <span>Reports & Audit</span></button>
+      <button type="button" data-section="admin" class="nav admin-only">⚙ <span>Administration</span></button>
+      <button type="button" data-section="opac" class="nav">⌕ <span>Public OPAC</span></button>
+    </nav>
+    <div class="side-status"><span class="dot"></span><div><b>System healthy</b><small>Local / isolated mode</small></div></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><div class="breadcrumb">AISYS / <b id="pageTitle">Dashboard</b></div><div class="site-label">Central Library · Main Branch</div></div>
+      <div class="top-right"><span id="clock"></span><span id="me" class="user"></span><span id="rolePill" class="role"></span><button type="button" class="btn outline" onclick="logout()">Sign out</button></div>
+    </header>
+
+    <div class="content">
+      <section id="dashboard" class="section active">
+        <div class="section-title"><div><div class="kicker">LIBRARY OPERATIONS</div><h1>Dashboard</h1><p>Live operational summary across the collection, circulation and RFID network.</p></div><div class="actions"><button type="button" class="btn outline" onclick="runDemo(this)">Run acceptance demo</button><button type="button" class="btn primary" onclick="showSection('catalog')">New catalogue record</button></div></div>
+        <div id="metrics" class="metric-table"></div>
+        <div class="dashboard-grid">
+          <div class="panel"><div class="panel-head"><div><b>Circulation today</b><small>Recent transactions</small></div><button type="button" class="link" onclick="showSection('circulation')">Open desk →</button></div><div id="dashCirculation"></div></div>
+          <div class="panel"><div class="panel-head"><div><b>RFID device activity</b><small>Last 10 events</small></div><span class="live"><i></i> LIVE</span></div><div id="dashRfid"></div></div>
+          <div class="panel"><div class="panel-head"><div><b>Security & notifications</b><small>Gate exceptions and queue</small></div><button type="button" class="link" onclick="showSection('security')">View →</button></div><div id="dashSecurity"></div></div>
+          <div class="panel"><div class="panel-head"><div><b>System status</b><small>Application and database</small></div></div><div id="healthBox" class="health-box"></div></div>
+        </div>
+      </section>
+
+      <section id="catalog" class="section">
+        <div class="section-title"><div><div class="kicker">BIBLIOGRAPHIC CONTROL</div><h1>Cataloguing & Search</h1><p>Search bibliographic records, inspect copies, availability and RFID state.</p></div><button type="button" class="btn primary" onclick="openModal('bookModal')">+ New item</button></div>
+        <div class="toolbar panel"><input id="bookSearch" placeholder="Search title, author, accession, ISBN or category" onkeydown="if(event.key==='Enter')loadCatalog()"><button type="button" class="btn primary" onclick="loadCatalog()">Search</button><button type="button" class="btn outline" onclick="resetCatalogSearch()">Reset</button></div>
+        <div class="two-col"><div class="panel"><div class="panel-head"><b>Catalogue records</b><span id="bookCount" class="count"></span></div><div id="catalogTable"></div></div><div class="panel detail"><div class="empty-detail" id="bookDetail">Select a catalogue record to view item, RFID and circulation details.</div></div></div>
+      </section>
+
+      <section id="circulation" class="section">
+        <div class="section-title"><div><div class="kicker">PATRON SERVICES</div><h1>Circulation Desk</h1><p>Issue, renew and return items using the same business rules across local, NCIP2 and SIP2 channels.</p></div></div>
+        <div class="desk-grid">
+          <div class="panel form-card"><div class="form-title">Check-out <span>NCIP2 / SIP2</span></div><label>Member number</label><input id="coMember"><label>Accession number</label><input id="coBook"><div class="row"><div><label>Channel</label><select id="coProtocol"><option>NCIP2</option><option>SIP2</option><option>LOCAL</option></select></div><div><label>Loan days</label><input id="coDays" type="number" value="14"></div></div><button type="button" class="btn primary full" onclick="checkoutItem(this)">Issue item</button></div>
+          <div class="panel form-card"><div class="form-title">Renew loan <span>Due date</span></div><label>Accession number</label><input id="rnBook"><label>Channel</label><select id="rnProtocol"><option>SIP2</option><option>NCIP2</option><option>LOCAL</option></select><label>Additional days</label><input id="rnDays" type="number" value="14"><button type="button" class="btn outline full" onclick="renewItem(this)">Renew</button></div>
+          <div class="panel form-card"><div class="form-title">Check-in <span>Return</span></div><label>Accession number</label><input id="ciBook"><label>Channel</label><select id="ciProtocol"><option>NCIP2</option><option>SIP2</option><option>LOCAL</option></select><div class="desk-note">The active loan is closed and the item becomes available.</div><button type="button" class="btn outline full" onclick="checkinItem(this)">Check in</button></div>
+        </div>
+        <div class="panel"><div class="panel-head"><b>Transaction history</b><button type="button" class="link" onclick="loadCirculation()">Refresh</button></div><div id="circulationTable"></div></div>
+      </section>
+
+      <section id="members" class="section">
+        <div class="section-title"><div><div class="kicker">PATRON MANAGEMENT</div><h1>Members & Fines</h1><p>Membership status, borrowing eligibility and fine controls.</p></div><button type="button" class="btn primary" onclick="openModal('memberModal')">+ New member</button></div>
+        <div class="panel"><div class="toolbar"><input id="memberSearch" placeholder="Filter member number or name" oninput="renderMembers()"><button type="button" class="btn outline" onclick="loadMembers()">Refresh</button></div><div id="membersTable"></div></div>
+      </section>
+
+      <section id="acquisitions" class="section">
+        <div class="section-title"><div><div class="kicker">COLLECTION DEVELOPMENT</div><h1>Acquisitions & Serials</h1><p>Track orders and serial issues within the same library control plane.</p></div></div>
+        <div class="two-col"><div class="panel form-card"><div class="form-title">New acquisition</div><label>Accession / order reference</label><input id="acqAcc"><label>Vendor</label><input id="acqVendor"><label>Status</label><select id="acqStatus"><option>ORDERED</option><option>RECEIVED</option><option>CANCELLED</option></select><button type="button" class="btn primary" onclick="createAcquisition(this)">Save acquisition</button><hr><div class="form-title">Serial issue</div><label>Title</label><input id="serTitle"><div class="row"><input id="serVol" placeholder="Volume"><input id="serIssue" placeholder="Issue no."></div><input id="serDate" placeholder="Issue date"><button type="button" class="btn outline" onclick="createSerial(this)">Add serial issue</button></div><div class="panel"><div class="panel-head"><b>Recent acquisitions</b></div><div id="acqTable"></div><hr><div class="panel-head"><b>Serial issues</b></div><div id="serialTable"></div></div></div>
+      </section>
+
+      <section id="tagging" class="section">
+        <div class="section-title"><div><div class="kicker">RFID DESK</div><h1>RFID Tagging Station</h1><p>Validate the item before encoding and associate one active RFID tag per copy.</p></div></div>
+        <div class="two-col"><div class="panel form-card"><div class="form-title">Tag an item</div><label>Accession number</label><input id="tagAcc"><button type="button" class="btn outline" onclick="validateBookForTag()">Validate record</button><div id="tagValidation" class="notice">No item selected.</div><label>RFID tag UID</label><input id="tagUid"><button type="button" class="btn primary full" onclick="associateTag(this)">Encode & associate</button><div class="device"><span class="dot"></span> STAFF-01 · Mock reader ready</div></div><div class="panel"><div class="panel-head"><b>Tagged items</b><button type="button" class="link" onclick="loadTags()">Refresh</button></div><div id="tagsTable"></div></div></div>
+      </section>
+
+      <section id="inventory" class="section">
+        <div class="section-title"><div><div class="kicker">STOCK VERIFICATION</div><h1>Handheld Inventory</h1><p>Bulk-read a shelf and classify every tag as found, misplaced or unknown.</p></div></div>
+        <div class="two-col"><div class="panel form-card"><div class="form-title">Shelf session <span>HH-01</span></div><label>Shelf / location</label><input id="invShelf" value="A-01"><label>Expected tag UIDs</label><textarea id="invExpected" rows="4" placeholder="Tags expected on this shelf"></textarea><label>Observed tag UIDs</label><textarea id="invTags" rows="5" placeholder="Tags actually read by HH-01"></textarea><button type="button" class="btn primary full" onclick="inventoryScan(this)">Start shelf verification</button><div class="device"><span class="dot"></span> Audible + visual confirmation enabled</div></div><div class="panel"><div class="panel-head"><b>Inventory results</b><span id="inventorySummary" class="count"></span></div><div id="inventoryTable"></div></div></div>
+      </section>
+
+      <section id="security" class="section">
+        <div class="section-title"><div><div class="kicker">LOSS PREVENTION</div><h1>Security Gate & Notifications</h1><p>Evaluate an RFID passage, capture a mock CCTV reference and queue provider-neutral notifications.</p></div></div>
+        <div class="two-col"><div><div class="panel form-card"><div class="form-title">Gate event <span>GATE-01</span></div><label>RFID tag UID</label><input id="gateUid"><label>CCTV reference</label><input id="gateCctv" value="mock://cctv/GATE-01"><label class="check"><input id="gateBit" type="checkbox" checked> Security bit armed</label><label class="check"><input id="gateOffline" type="checkbox"> LMS offline — use security-bit decision</label><button type="button" class="btn danger full" onclick="triggerGate(this)">Evaluate passage</button><div class="device"><span class="dot"></span> Camera CAM-01 · Email queue connected</div></div><div class="panel form-card" style="margin-top:18px"><div class="form-title">Smart-card staff login <span>SC-01</span></div><label>Username</label><input id="cardUser" value="admin"><label>Card UID</label><input id="cardUid" value="CARD-ADMIN-01"><button type="button" class="btn outline full" onclick="smartCardCheck(this)">Validate smart card</button><div id="cardResult" class="notice">Reader ready.</div></div></div><div class="panel"><div class="panel-head"><b>Gate event log</b><button type="button" class="link" onclick="loadSecurity()">Refresh</button></div><div id="gateTable"></div><hr><div class="panel-head"><b>Notification queue</b></div><div id="notificationTable"></div></div></div>
+      </section>
+
+      <section id="migration" class="section">
+        <div class="section-title"><div><div class="kicker">DATA CONTROL</div><h1>Migration Center</h1><p>Stage spreadsheet data, reject bad rows, detect duplicates, import valid records and reconcile counts.</p></div></div>
+        <div class="two-col"><div class="panel form-card"><div class="form-title">Spreadsheet intake</div><input id="migrationFile" type="file" accept=".csv,.xlsx"><div class="row"><button type="button" class="btn outline" onclick="migration('dry-run',this)">Validate / dry-run</button><button type="button" class="btn primary" onclick="migration('import',this)">Import valid set</button></div><div id="migrationResult" class="notice">No migration run.</div><a class="download" href="/sample/library_source_20000.xlsx">Download sample 20,000-row workbook</a></div><div class="panel"><div class="panel-head"><b>Migration runs</b><button type="button" class="link" onclick="loadMigrations()">Refresh</button></div><div id="migrationTable"></div></div></div>
+      </section>
+
+      <section id="reports" class="section">
+        <div class="section-title"><div><div class="kicker">MANAGEMENT INFORMATION</div><h1>Reports & Audit</h1><p>Operational reporting with traceable administrative and circulation events.</p></div><button type="button" class="btn outline" onclick="loadReports()">Refresh</button></div>
+        <div id="reportMetrics" class="metric-table"></div><div class="two-col"><div class="panel"><div class="panel-head"><b>Circulation report</b></div><div id="reportCirculation"></div></div><div class="panel"><div class="panel-head"><b>Audit trail</b></div><div id="reportAudit"></div></div></div>
+      </section>
+
+      <section id="admin" class="section">
+        <div class="section-title"><div><div class="kicker">SYSTEM ADMINISTRATION</div><h1>Administration</h1><p>Roles, system parameters, health and configuration audit.</p></div></div>
+        <div class="two-col"><div class="panel"><div class="panel-head"><b>Staff accounts</b><button type="button" class="link" onclick="loadAdmin()">Refresh</button></div><div id="usersTable"></div><hr><div class="form-title">Add staff account</div><div class="row"><input id="newUser" placeholder="Username"><select id="newRole"><option>operator</option><option>librarian</option><option>admin</option></select></div><input id="newPass" placeholder="Temporary password" type="password"><button type="button" class="btn outline" onclick="createUser(this)">Create user</button></div><div class="panel form-card"><div class="form-title">Library parameters</div><label>Fine limit (₹)</label><input id="fineLimit" type="number" value="100"><label>Default loan days</label><input id="loanDays" type="number" value="14"><button type="button" class="btn primary" onclick="saveConfig(this)">Save parameters</button><div id="configResult" class="notice">Loading configuration…</div></div></div>
+      </section>
+
+      <section id="opac" class="section public-section">
+        <div class="section-title"><div><div class="kicker">PUBLIC ACCESS CATALOGUE</div><h1>OPAC</h1><p>Search the library collection without staff controls.</p></div></div>
+        <div class="toolbar panel"><input id="opacSearch" placeholder="Search catalogue" onkeydown="if(event.key==='Enter')loadOpac()"><button type="button" class="btn primary" onclick="loadOpac()">Search</button></div><div class="panel"><div id="opacTable"></div></div>
+      </section>
+    </div>
+    <footer>AISYS ILMS · Evaluation build v3.0.3 · Synthetic data / mocked external integrations <span id="lastRefresh"></span></footer>
+  </main>
+</div>
+
+<div id="bookModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('bookModal')">×</button><h2>New catalogue item</h2><label>Accession number</label><input id="bookAccession"><label>Title</label><input id="bookTitle"><label>Author</label><input id="bookAuthor"><div class="row"><input id="bookIsbn" placeholder="ISBN"><input id="bookCategory" placeholder="Category" value="General"></div><label class="check"><input id="bookReference" type="checkbox"> Reference-only item</label><button type="button" class="btn primary full" onclick="createBook(this)">Create record</button></div></div>
+<div id="memberModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('memberModal')">×</button><h2>New member</h2><label>Member number</label><input id="memberNo"><label>Name</label><input id="memberName"><label>Email</label><input id="memberEmail"><button type="button" class="btn primary full" onclick="createMember(this)">Create member</button></div></div>
+<div id="toast" class="toast" hidden></div>
+<script src="/static/app.js"></script>
+</body></html>

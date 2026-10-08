@@ -1,0 +1,17 @@
+AISYS ILMS v2.0.0 — Windows quick start
+
+1. Use Python 3.11.
+2. Create/activate .venv.
+3. python -m pip install -r requirements.txt
+4. pytest -q
+5. python -m uvicorn app.main:app --reload
+6. Open http://127.0.0.1:8000
+7. Login: admin / Admin@12345
+8. Start with Dashboard, then demonstrate AC01 through AC10.
+
+Recommended evidence order:
+AC01 Migration -> AC02 Catalog/RFID -> AC03 Circulation -> AC04 Restrictions ->
+AC05 Inventory -> AC06 Gate -> AC07 Smart Card/RBAC -> AC08 Reports ->
+AC09 Offline update/rollback -> AC10 Backup/restore.
+
+Do not claim physical RFID hardware, live CCTV, real email delivery, live ILMS transport or NCIP/SIP2 certification. Those are mocked adapter boundaries in this candidate build.
