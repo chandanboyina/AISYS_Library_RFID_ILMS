@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#17324d"><title>AISYS ILMS</title>
-<link rel="stylesheet" href="/static/app.css?v=3.2.0">
+<link rel="stylesheet" href="/static/app.css?v=3.4.0">
 </head>
 <body>
 <div id="authView" class="login-page">
@@ -125,8 +125,26 @@
   </main>
 </div>
 
-<div id="bookModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('bookModal')">×</button><h2>New catalogue item</h2><label>Accession number</label><input id="bookAccession"><label>Title</label><input id="bookTitle"><label>Author</label><input id="bookAuthor"><div class="row"><input id="bookIsbn" placeholder="ISBN"><input id="bookCategory" placeholder="Category" value="General"></div><label class="check"><input id="bookReference" type="checkbox"> Reference-only item</label><button type="button" class="btn primary full" onclick="createBook(this)">Create record</button></div></div>
+<div id="bookModal" class="modal" hidden>
+  <div class="modal-card catalogue-modal" role="dialog" aria-modal="true" aria-labelledby="bookModalTitle">
+    <button type="button" class="close" aria-label="Close catalogue form" onclick="closeModal('bookModal')">×</button>
+    <div class="kicker">CATALOGUING WORKSPACE</div>
+    <h2 id="bookModalTitle">New catalogue item</h2>
+    <p class="modal-intro">Create a bibliographic record. Accession numbers must be unique for each physical copy.</p>
+    <div class="form-grid">
+      <div class="field full-field"><label for="bookAccession">Accession number <span class="required">*</span></label><input id="bookAccession" name="accession_no" autocomplete="off" placeholder="e.g. AISYS-ACC-0006" maxlength="80" required><small>Unique identifier assigned to this library copy.</small></div>
+      <div class="field full-field"><label for="bookTitle">Title <span class="required">*</span></label><input id="bookTitle" name="title" placeholder="Enter the full book title" maxlength="300" required></div>
+      <div class="field full-field"><label for="bookAuthor">Author</label><input id="bookAuthor" name="author" placeholder="Author or editor name" maxlength="200"></div>
+      <div class="field"><label for="bookIsbn">ISBN / identifier</label><input id="bookIsbn" name="isbn" placeholder="ISBN or test identifier" maxlength="30"><small>Optional for internal test records.</small></div>
+      <div class="field"><label for="bookCategory">Category <span class="required">*</span></label><input id="bookCategory" name="category" placeholder="e.g. Computer Science" value="General" maxlength="120" required></div>
+      <label class="check full-field reference-option"><input id="bookReference" type="checkbox"><span><b>Reference-only item</b><small>Mark items that cannot be checked out.</small></span></label>
+    </div>
+    <div id="bookFormStatus" class="form-status" role="status" aria-live="polite"></div>
+    <div class="modal-actions"><button type="button" class="btn outline" onclick="closeModal('bookModal')">Cancel</button><button type="button" class="btn primary" onclick="createBook(this)">Create catalogue record</button></div>
+    <p class="form-footnote"><span class="required">*</span> Required fields · Existing records are not overwritten.</p>
+  </div>
+</div>
 <div id="memberModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('memberModal')">×</button><h2>New member</h2><label>Member number</label><input id="memberNo"><label>Name</label><input id="memberName"><label>Email</label><input id="memberEmail"><button type="button" class="btn primary full" onclick="createMember(this)">Create member</button></div></div>
 <div id="toast" class="toast" hidden></div>
-<script src="/static/app.js?v=3.3.0"></script>
+<script src="/static/app.js?v=3.4.0"></script>
 </body></html>
