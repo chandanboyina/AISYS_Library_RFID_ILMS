@@ -61,7 +61,7 @@
       </section>
 
       <section id="catalog" class="section">
-        <div class="section-title"><div><div class="kicker">BIBLIOGRAPHIC CONTROL</div><h1>Cataloguing & Search</h1><p>Search bibliographic records, inspect copies, availability and RFID state.</p></div><button type="button" class="btn primary" onclick="openModal('bookModal')">+ New item</button></div>
+        <div class="section-title"><div><div class="kicker">BIBLIOGRAPHIC CONTROL</div><h1>Cataloguing & Search</h1><p>Search bibliographic records, inspect copies, availability and RFID state.</p></div><button type="button" class="btn primary" data-roles="admin,librarian" onclick="openModal('bookModal')">+ New item</button></div>
         <div class="toolbar panel"><input id="bookSearch" placeholder="Search title, author, accession, ISBN or category" onkeydown="if(event.key==='Enter')loadCatalog()"><button type="button" class="btn primary" onclick="loadCatalog(this)">Search</button><button type="button" class="btn outline" onclick="resetCatalogSearch()">Reset</button></div>
         <div class="two-col"><div class="panel"><div class="panel-head"><b>Catalogue records</b><span id="bookCount" class="count"></span></div><div id="catalogTable"></div></div><div class="panel detail"><div class="empty-detail" id="bookDetail">Select a catalogue record to view item, RFID and circulation details.</div></div></div>
       </section>
@@ -77,7 +77,7 @@
       </section>
 
       <section id="members" class="section">
-        <div class="section-title"><div><div class="kicker">PATRON MANAGEMENT</div><h1>Members & Fines</h1><p>Membership status, borrowing eligibility and fine controls.</p></div><button type="button" class="btn primary" onclick="openModal('memberModal')">+ New member</button></div>
+        <div class="section-title"><div><div class="kicker">PATRON MANAGEMENT</div><h1>Members & Fines</h1><p>Membership status, borrowing eligibility and fine controls.</p></div><button type="button" class="btn primary" data-roles="admin,librarian" onclick="openModal('memberModal')">+ New member</button></div>
         <div class="panel"><div class="toolbar"><input id="memberSearch" placeholder="Filter member number or name" oninput="renderMembers()"><button type="button" class="btn outline" onclick="loadMembers()">Refresh</button></div><div id="membersTable"></div></div>
       </section>
 
