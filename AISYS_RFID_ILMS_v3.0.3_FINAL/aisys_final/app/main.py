@@ -45,10 +45,42 @@ def bootstrap_users() -> None:
         db.close()
 
 
+def bootstrap_demo_data() -> None:
+    """Create small, idempotent synthetic records so a fresh demo deployment is usable."""
+    db = SessionLocal()
+    try:
+        demo_books = [
+            ("DEMO-0001", "9780000000001", "RFID Systems Engineering", "AISYS Demo", "Technology"),
+            ("DEMO-0002", "9780000000002", "Library Automation & Digital Services", "AISYS Demo", "Library Science"),
+            ("DEMO-0003", "9780000000003", "Enterprise Information Systems", "AISYS Demo", "Computer Science"),
+        ]
+        for accession_no, isbn, title, author, category in demo_books:
+            if not db.query(Book).filter(Book.accession_no == accession_no).first():
+                db.add(Book(
+                    accession_no=accession_no,
+                    isbn=isbn,
+                    title=title,
+                    author=author,
+                    category=category,
+                ))
+        db.flush()
+
+        book = db.query(Book).filter(Book.accession_no == "DEMO-0001").first()
+        if book and not db.query(RFIDTag).filter(RFIDTag.tag_id == "RFID-DEMO-0001").first():
+            db.add(RFIDTag(tag_id="RFID-DEMO-0001", book_id=book.id))
+
+        if not db.query(Member).filter(Member.member_no == "M-DEMO-01").first():
+            db.add(Member(member_no="M-DEMO-01", name="Demo Member", email="demo@example.local"))
+        db.commit()
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     Base.metadata.create_all(bind=engine)
     bootstrap_users()
+    bootstrap_demo_data()
     yield
 
 
