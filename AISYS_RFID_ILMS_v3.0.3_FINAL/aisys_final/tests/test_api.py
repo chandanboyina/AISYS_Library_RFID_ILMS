@@ -80,3 +80,20 @@ def test_ilms_operational_endpoints_and_configurable_fine_limit():
         assert blocked.status_code == 409
         assert '50.00' in blocked.text
         assert client.get('/api/migration/runs/999999', headers=h).status_code == 404
+
+
+
+def test_seeded_catalogue_search_by_title_accession_isbn_and_category():
+    with TestClient(app) as client:
+        headers = auth(client)
+        cases = [
+            ("Python for Library Automation", "AISYS-ACC-0001"),
+            ("AISYS-ACC-0001", "AISYS-ACC-0001"),
+            ("TEST-AISYS-001", "AISYS-ACC-0001"),
+            ("Computer Science", "AISYS-ACC-0001"),
+            ("RFID Systems in Smart Libraries", "AISYS-ACC-0002"),
+        ]
+        for term, expected_accession in cases:
+            response = client.get("/api/books", params={"q": term}, headers=headers)
+            assert response.status_code == 200, response.text
+            assert any(book["accession_no"] == expected_accession for book in response.json()), term
