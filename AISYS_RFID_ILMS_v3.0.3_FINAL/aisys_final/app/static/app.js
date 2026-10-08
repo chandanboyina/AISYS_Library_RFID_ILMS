@@ -69,9 +69,61 @@ function list(v){return Array.isArray(v)?v:[]}
 function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}function dt(v){return v?new Date(v).toLocaleString([], {dateStyle:'medium',timeStyle:'short'}):'—'}
 
 async function loadDashboard(){const [d,c0,r0,g0,h,n0]=await Promise.all([api('/api/dashboard'),api('/api/reports/circulation'),api('/api/rfid/events'),api('/api/gate/events'),api('/api/health'),api('/api/notifications')]);const c=list(c0),r=list(r0),g=list(g0),n=list(n0);$('metrics').innerHTML=[['Catalogued items',d.books],['Members',d.members],['Available',d.available],['Active loans',d.issued],['RFID tags',d.rfid_tags],['Gate events',d.gate_events],['Notifications',d.notifications],['Audit events',d.audit_events]].map(x=>`<div class="metric"><small>${x[0]}</small><b>${x[1]}</b></div>`).join('');$('dashCirculation').innerHTML=c.slice(0,6).map(x=>row(`Book #${x.book_id}`,`Member #${x.member_id} · ${x.protocol}`,dt(x.checkout_at),x.status)).join('')||row('No transactions','Circulation desk is clear');$('dashRfid').innerHTML=r.slice(0,6).map(x=>row(x.tag_id,`${x.accession_no||'Unknown'} · shelf ${x.shelf||'—'}`,dt(x.created_at),x.event_type)).join('')||row('No RFID activity','No recent reads');$('dashSecurity').innerHTML=g.slice(0,4).map(x=>row(x.accession_no,`Tag ${x.tag_id} · ${x.cctv_image_ref}`,dt(x.created_at),x.authorized?'AUTHORIZED':'UNAUTHORIZED')).join('')||row('No gate exceptions','Notification queue is clear');$('healthBox').innerHTML=`<div class="health-line"><span>Application</span><b class="status ok">${esc(h.status)}</b></div><div class="health-line"><span>Database</span><b class="status ok">${esc(h.database)}</b></div><div class="health-line"><span>Version</span><b>${esc(h.version)}</b></div><div class="health-line"><span>Mode</span><b>${esc(h.environment)}</b></div>`}
-async function loadCatalog(button=null){setBusy(button,true,'Searching…');try{const input=$('bookSearch');const q=(input?.value||'').trim();const books=await api('/api/books?q='+encodeURIComponent(q));const rows=Array.isArray(books)?books:[];$('bookCount').textContent=rows.length?String(rows.length):'0';$('catalogTable').innerHTML=rows.length?table(['Accession','Title','Author','Category','Status','RFID'],rows.map(b=>`<tr><td class="clickable" onclick="showBook('${esc(b.accession_no)}')">${esc(b.accession_no)}</td><td>${esc(b.title)}${b.reference_only?' <span class="status warn">REF</span>':''}</td><td>${esc(b.author)}</td><td>${esc(b.category)}</td><td><span class="status ${b.available?'ok':'bad'}">${b.available?'AVAILABLE':'ISSUED'}</span></td><td><button type="button" class="link" onclick="showBook('${esc(b.accession_no)}')">View RFID</button></td></tr>`).join('')):table(['Accession','Title','Author','Category','Status','RFID'],[]);markRefreshed()}catch(e){console.error('Catalogue search failed:',e);$('bookCount').textContent='—';$('catalogTable').innerHTML=table(['Accession','Title','Author','Category','Status','RFID'],[]);toast(friendlyError(e,'Catalogue search'),'error')}finally{setBusy(button,false)}}
+async function loadCatalog(button=null){
+  setBusy(button,true,'Searching…');
+  const headers=['Accession','Title','Author','Category','ISBN','Availability','RFID'];
+  try{
+    const q=($('bookSearch')?.value||'').trim();
+    const results=await Promise.all([api('/api/books?q='+encodeURIComponent(q)),api('/api/rfid/tags')]);
+    const books=Array.isArray(results[0])?results[0]:[];
+    const tags=Array.isArray(results[1])?results[1]:[];
+    const tagsByAccession=new Map(tags.filter(t=>t.active).map(t=>[t.accession_no,t.tag_id]));
+    $('bookCount').textContent=String(books.length);
+    if(!books.length){
+      $('catalogTable').innerHTML='<div class="empty-detail"><b>No matching catalogue records</b><p>Try a title, author, accession number, ISBN or category. Clear the search to view all records.</p></div>';
+      markRefreshed();
+      return;
+    }
+    $('catalogTable').innerHTML=table(headers,books.map(b=>{
+      const tag=tagsByAccession.get(b.accession_no);
+      return '<tr>'+
+        '<td><button type="button" class="link" onclick="showBook(\''+esc(b.accession_no)+'\')">'+esc(b.accession_no)+'</button></td>'+
+        '<td><b>'+esc(b.title)+'</b>'+(b.reference_only?' <span class="status warn">REFERENCE</span>':'')+'</td>'+
+        '<td>'+esc(b.author||'—')+'</td>'+
+        '<td>'+esc(b.category||'General')+'</td>'+
+        '<td>'+esc(b.isbn||'—')+'</td>'+
+        '<td><span class="status '+(b.available?'ok':'bad')+'">'+(b.available?'AVAILABLE':'ISSUED')+'</span></td>'+
+        '<td>'+(tag?esc(tag):'<span class="status warn">NOT TAGGED</span>')+'</td>'+
+      '</tr>';
+    }).join(''));
+    markRefreshed();
+  }catch(e){
+    console.error('Catalogue search failed:',e);
+    $('bookCount').textContent='—';
+    $('catalogTable').innerHTML='<div class="empty-detail"><b>Catalogue could not be loaded</b><p>Check the server connection and try again. The error is shown in the notification.</p></div>';
+    toast(friendlyError(e,'Catalogue search'),'error');
+  }finally{
+    setBusy(button,false);
+  }
+}
 function resetCatalogSearch(){const input=$('bookSearch');if(input)input.value='';loadCatalog()}
-async function showBook(acc){const d=await api('/api/books/'+encodeURIComponent(acc));$('bookDetail').innerHTML=`<div class="kicker">ITEM RECORD</div><h3>${esc(d.book.title)}</h3><p><b>${esc(d.book.accession_no)}</b> · ${esc(d.book.author)} · ${esc(d.book.category)}</p><div class="notice">${d.book.reference_only?'Reference-only item':'Circulating item'} · ${d.book.available?'Available':'Currently issued'}</div><h4>RFID relationship</h4><p>${d.rfid?esc(d.rfid.tag_id)+' · last seen '+dt(d.rfid.last_seen_at):'No active RFID tag'}</p><h4>Active loan</h4><p>${d.active_loan?`Member #${d.active_loan.member_id} · due ${dt(d.active_loan.due_at)} · ${esc(d.active_loan.protocol)}`:'No active loan'}</p><button class="btn outline" onclick="loadBookHistory('${esc(acc)}')">View circulation history</button> <button class="btn outline" onclick="printItemLabel('${esc(acc)}')">Print item label</button><div id="bookHistory"></div>`}
+async function showBook(acc){
+  try{
+    const d=await api('/api/books/'+encodeURIComponent(acc));
+    const b=d.book;
+    $('bookDetail').innerHTML='<div class="kicker">BIBLIOGRAPHIC ITEM RECORD</div><h3>'+esc(b.title)+'</h3>'+
+      '<div class="health-box">'+
+      '<div class="health-line"><span>Accession number</span><b>'+esc(b.accession_no)+'</b></div>'+
+      '<div class="health-line"><span>ISBN / test identifier</span><b>'+esc(b.isbn||'—')+'</b></div>'+
+      '<div class="health-line"><span>Author</span><b>'+esc(b.author||'—')+'</b></div>'+
+      '<div class="health-line"><span>Category</span><b>'+esc(b.category||'General')+'</b></div>'+
+      '<div class="health-line"><span>Availability</span><b class="status '+(b.available?'ok':'bad')+'">'+(b.available?'AVAILABLE':'ISSUED')+'</b></div>'+
+      '<div class="health-line"><span>Collection type</span><b>'+(b.reference_only?'REFERENCE ONLY':'CIRCULATING')+'</b></div></div>'+
+      '<h4>RFID relationship</h4><p>'+(d.rfid?esc(d.rfid.tag_id)+' · last seen '+dt(d.rfid.last_seen_at):'No active RFID tag is associated with this item.')+'</p>'+
+      '<h4>Active loan</h4><p>'+(d.active_loan?'Member #'+d.active_loan.member_id+' · due '+dt(d.active_loan.due_at)+' · '+esc(d.active_loan.protocol):'No active loan')+'</p>'+
+      '<button class="btn outline" onclick="loadBookHistory(\''+esc(acc)+'\')">View circulation history</button> <button class="btn outline" onclick="printItemLabel(\''+esc(acc)+'\')">Print item label</button><div id="bookHistory"></div>';
+  }catch(e){toast(friendlyError(e,'Open catalogue record'),'error')}
+}
 function printItemLabel(acc){api('/api/books/'+encodeURIComponent(acc)).then(d=>{const w=window.open('','_blank','width=520,height=420');w.document.write(`<html><head><title>Item Label</title><style>body{font-family:Arial;padding:35px}.label{border:1px solid #222;padding:25px;width:380px}.code{font:32px monospace;letter-spacing:3px;margin:20px 0}</style></head><body><div class="label"><b>AISYS CENTRAL LIBRARY</b><h2>${esc(d.book.title)}</h2><p>${esc(d.book.author)}</p><div class="code">*${esc(d.book.accession_no)}*</div><p>Accession: ${esc(d.book.accession_no)}</p></div><script>window.print()<\/script></body></html>`);w.document.close()})}
 async function loadBookHistory(acc){const h=list(await api('/api/books/'+encodeURIComponent(acc)+'/history'));$('bookHistory').innerHTML='<hr>'+h.map(x=>row(x.status,`Member #${x.member_id} · ${x.protocol}`,dt(x.checkout_at))).join('')}
 async function createBook(button){setBusy(button,true,'Creating…');try{await api('/api/books',{method:'POST',headers:jsonHeaders,body:JSON.stringify({accession_no:$('bookAccession').value.trim(),title:$('bookTitle').value.trim(),author:$('bookAuthor').value.trim(),category:$('bookCategory').value.trim(),isbn:$('bookIsbn').value.trim(),reference_only:$('bookReference').checked})});closeModal('bookModal');['bookAccession','bookTitle','bookAuthor','bookIsbn'].forEach(id=>$(id).value='');$('bookCategory').value='General';$('bookReference').checked=false;toast('Catalogue record created');await refreshAfterMutation(loadCatalog)}catch(e){toast(friendlyError(e,'Create catalogue record'),'error')}finally{setBusy(button,false)}}
