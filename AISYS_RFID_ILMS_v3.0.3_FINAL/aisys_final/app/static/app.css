@@ -34,3 +34,9 @@
 .member-modal input{box-sizing:border-box;width:100%;padding:11px 12px;border:1px solid #cbd5df;border-radius:5px;font:inherit;font-size:14px}
 .member-modal input:focus{outline:none;border-color:#3679a8;box-shadow:0 0 0 3px rgba(54,121,168,.13)}
 .member-modal .btn{margin-top:18px}
+
+
+/* Authentication view must never remain visible behind the application after sign-in. */
+#authView[hidden], #appShell[hidden] { display: none !important; }
+body.session-active #authView { display: none !important; }
+body:not(.session-active) #appShell { display: none !important; }
