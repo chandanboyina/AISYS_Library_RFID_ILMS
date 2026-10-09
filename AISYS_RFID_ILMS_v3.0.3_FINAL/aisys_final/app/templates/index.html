@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#17324d"><title>AISYS ILMS</title>
-<link rel="stylesheet" href="/static/app.css?v=4.0.0">
+<link rel="stylesheet" href="/static/app.css?v=4.0.1">
 </head>
 <body>
 <div id="authView" class="login-page">
@@ -147,5 +147,5 @@
 <div id="memberDetailModal" class="modal" hidden><div class="modal-card"><button type="button" class="close" onclick="closeModal('memberDetailModal')">×</button><div class="kicker">PATRON RECORD</div><h2>Member details</h2><div id="memberDetailContent">Select a member to view details.</div></div></div>
 <div id="memberModal" class="modal" hidden><div class="modal-card member-modal"><button type="button" class="close" onclick="closeModal('memberModal')" aria-label="Close">×</button><div class="kicker">PATRON REGISTRATION</div><h2>New member</h2><p class="modal-intro">Register a library borrower. The member number identifies the person; accession numbers identify books and are assigned in Cataloguing &amp; Search.</p><label for="memberNo">Member number <span class="required">*</span></label><input id="memberNo" placeholder="e.g. AISYS-MEM-0002" autocomplete="off" maxlength="50" required><label for="memberName">Full name <span class="required">*</span></label><input id="memberName" placeholder="Enter member name" maxlength="160" required><label for="memberEmail">Email address</label><input id="memberEmail" type="email" placeholder="name@example.com"><button type="button" class="btn primary full" onclick="createMember(this)">Create member</button></div></div>
 <div id="toast" class="toast" hidden></div>
-<script src="/static/app.js?v=4.0.0"></script>
+<script src="/static/app.js?v=4.0.1"></script>
 </body></html>
