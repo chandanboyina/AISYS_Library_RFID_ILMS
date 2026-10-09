@@ -20,7 +20,7 @@ async function api(path,opt={}){
 }
 function toast(msg,type=''){const t=$('toast');if(!t)return;t.textContent=msg;t.className=`toast ${type||''}`.trim();t.hidden=false;clearTimeout(window.__aisysToastTimer);window.__aisysToastTimer=setTimeout(()=>t.hidden=true,3200)}
 function friendlyError(e,context='Operation'){console.error(context,e);const msg=String(e?.message||e||'').trim();if(/join is not a function|cannot read properties|undefined|is not a function|syntaxerror/i.test(msg))return `${context} could not be completed. Please refresh the current screen and try again.`;return msg||`${context} could not be completed.`}
-function showAuthView(){$('authView').hidden=false;$('authView').style.display='flex';$('appShell').hidden=true;$('appShell').style.display='none';$('u')?.focus()}
+function showAuthView(){document.body.classList.remove('session-active');$('authView').hidden=false;$('authView').style.display='flex';$('appShell').hidden=true;$('appShell').style.display='none';$('u')?.focus()}
 function setBusy(button,busy,label){if(!button)return;if(busy){button.dataset.originalText=button.textContent;button.disabled=true;button.setAttribute('aria-busy','true');button.textContent=label||'Working…'}else{button.disabled=false;button.removeAttribute('aria-busy');if(button.dataset.originalText)button.textContent=button.dataset.originalText}}
 async function login(button){const submit=button||document.querySelector('#loginForm button[type="submit"]');const username=$('u')?.value.trim();const password=$('p')?.value||'';if(!username||!password){if($('loginStatus')){$('loginStatus').className='login-status error';$('loginStatus').textContent='Enter your username and password.'}toast('Enter your username and password.','error');return false}
   if($('loginStatus')){$('loginStatus').className='login-status';$('loginStatus').textContent='Signing in…'}setBusy(submit,true,'Signing in…');try{const fd=new URLSearchParams();fd.set('username',username);fd.set('password',password);const d=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:fd});let j={};try{j=await d.json()}catch{}if(!d.ok)throw Error(j.detail||'Invalid username or password.');token=j.access_token;localStorage.setItem('aisys_token',token);if($('loginStatus')){$('loginStatus').className='login-status good';$('loginStatus').textContent='Signed in successfully.'}await showApp();return true}catch(e){if($('loginStatus')){$('loginStatus').className='login-status error';$('loginStatus').textContent=friendlyError(e,'Sign in')}toast(friendlyError(e,'Sign in'),'error');return false}finally{setBusy(submit,false)}}
@@ -40,7 +40,7 @@ function applyRoleExperience(){
 async function showApp(){
  try{
   const m=await api('/api/me');currentUser=m.username;currentRole=m.role;
-  $('authView').hidden=true;$('authView').style.display='none';$('appShell').hidden=false;$('appShell').style.display='flex';
+  document.body.classList.add('session-active');$('authView').hidden=true;$('authView').style.display='none';$('appShell').hidden=false;$('appShell').style.display='flex';
   $('me').textContent=m.username;$('rolePill').textContent=m.role.toUpperCase();applyRoleExperience();
   await refreshAll();showSection('dashboard');startClock();
  }catch(e){console.error('Authentication/session check failed:',e);token=null;localStorage.removeItem('aisys_token');showAuthView();toast(friendlyError(e,'Session check'),'error')}
